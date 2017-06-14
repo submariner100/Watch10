@@ -34,6 +34,10 @@ class WorkoutInterfaceController: WKInterfaceController, HKWorkoutSessionDelegat
      let countPerMinuteUnit = HKUnit(from: "count/min")
      var displayMode = DisplayMode.distance
      var workoutIsActive = true
+     var workoutEndDate = Date()
+     
+     
+     
      
      override func awake(withContext context: Any?) {
         super.awake(withContext: context)
@@ -147,15 +151,26 @@ class WorkoutInterfaceController: WKInterfaceController, HKWorkoutSessionDelegat
      
           switch toState {
                
-               case .running:
-                    if fromState == .notStarted {
+          case .running:
+               if fromState == .notStarted {
                          startQueries()
+               
+               } else {
+                         
+                    workoutIsActive = true
                }
                
-               default:
-                    break
+          case .paused:
+               workoutIsActive = false
+               
+          case .ended:
+               workoutIsActive = false
+               cleanUpQueries()
+               save(workoutSession)
+            
+          default:
+               break
           }
-     
      }
      
      func startWorkout(type: HKWorkoutActivityType) {
@@ -202,7 +217,7 @@ class WorkoutInterfaceController: WKInterfaceController, HKWorkoutSessionDelegat
           
           case .energy:
                let kiloCalories = totalEnergyBurned.doubleValue(for: HKUnit.kilocalorie())
-               let formattedKiloCalories = String(format: "%.02", kiloCalories)
+               let formattedKiloCalories = String(format: "%.0f", kiloCalories)
                quantityLabel.setText(formattedKiloCalories)
                unitLabel.setText("CALORIES")
                
@@ -259,25 +274,80 @@ class WorkoutInterfaceController: WKInterfaceController, HKWorkoutSessionDelegat
                updateLabels()
      }
 
-     @IBAction func changedisplayMode() {
+     @IBAction func changeDisplayMode() {
      
+          switch displayMode {
+               
+          case .distance:
+               displayMode = .energy
+               
+          case .energy:
+               displayMode = .heartRate
+          
+          case .heartRate:
+               displayMode = .distance
+               
+          }
+     
+          updateLabels()
      
      }
      
      @IBAction func stopWorkout() {
      
-     
+          guard let workoutSession = workoutSession else { return }
+          
+               stopButton.setHidden(true)
+               resumeButton.setHidden(false)
+               endButton.setHidden(false)
+          
+               healthStore?.pause(workoutSession)
+               healthStore?.resumeWorkoutSession(workoutSession)
+      
      }
     
      @IBAction func resumeWorkout() {
      
-     
+          guard let workoutSession = workoutSession else { return }
+          
+          stopButton.setHidden(false)
+          resumeButton.setHidden(true)
+          endButton.setHidden(true)
+
+          healthStore?.resumeWorkoutSession(workoutSession)
      }
      
      @IBAction func endWorkout() {
      
-     
+          guard let workoutSession = workoutSession else { return }
+          
+          workoutEndDate = Date()
+          
+          healthStore?.end(workoutSession)
      }
      
+     func cleanUpQueries() {
+          
+          for query in activeDataQueries {
+               
+               healthStore?.stop(query)
+               
+          }
+          
+          activeDataQueries.removeAll()
+     }
      
-    }
+     func save(_ workoutSession: HKWorkoutSession) {
+          
+          let config = workoutSession.workoutConfiguration
+          let workout = HKWorkout(activityType: config.activityType, start: workoutStartDate, end: workoutEndDate, workoutEvents: nil, totalEnergyBurned: totalEnergyBurned, totalDistance: totalDistance, metadata: [HKMetadataKeyIndoorWorkout: false])
+          
+          healthStore?.save(workout) { (success, error) in
+          
+               if success {
+                    
+                    WKInterfaceController.reloadRootControllers(withNames: ["InterfaceController"], contexts: nil)
+               }
+          }
+     }
+}

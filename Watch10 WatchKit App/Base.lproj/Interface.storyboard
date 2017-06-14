@@ -48,8 +48,15 @@
                                     </label>
                                 </items>
                             </group>
+                            <connections>
+                                <action selector="changeDisplayMode" destination="axl-ml-tB1" id="jbo-21-lMk"/>
+                            </connections>
                         </button>
-                        <button width="1" alignment="left" verticalAlignment="bottom" title="Stop" id="Fcm-oJ-bQT"/>
+                        <button width="1" alignment="left" verticalAlignment="bottom" title="Stop" id="Fcm-oJ-bQT">
+                            <connections>
+                                <action selector="stopWorkout" destination="axl-ml-tB1" id="KSo-rL-atO"/>
+                            </connections>
+                        </button>
                         <button width="1" alignment="left" verticalAlignment="bottom" hidden="YES" title="Resume" id="O6x-DQ-0HH">
                             <connections>
                                 <action selector="resumeWorkout" destination="axl-ml-tB1" id="slw-eH-gwH"/>
